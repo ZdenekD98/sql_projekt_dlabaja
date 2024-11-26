@@ -1,0 +1,563 @@
+SQL Projekt Zdeněk Dlabaja
+
+1. Rostou v průběhu let mzdy ve všech odvětvích, nebo v některých klesají?
+__________________________________________________________________________
+
+-- Kód pro všechna odvětví--
+
+SELECT
+    value,
+    industry_branch_code,
+    payroll_year 
+FROM czechia_payroll
+WHERE value_type_code = 5958 and payroll_quarter = 1
+group by payroll_year, industry_branch_code;  
+
+-- Kód pro jednotlivá odvětví -- 
+
+SELECT
+    value,
+    industry_branch_code,
+    payroll_year 
+FROM czechia_payroll
+WHERE value_type_code = 5958 and payroll_quarter = 1 and industry_branch_code = 'A'
+group by payroll_year, industry_branch_code; 
+
+-- Příklad výstupu pro odvětví A - Zemědělství, lesnictví, rybářství: --
+|value |industry_branch_code|payroll_year|
+|------|--------------------|------------|
+|8,793 |A                   |2,000       |
+|9,639 |A                   |2,001       |
+|10,298|A                   |2,002       |
+|10,463|A                   |2,003       |
+|11,237|A                   |2,004       |
+|11,809|A                   |2,005       |
+|12,543|A                   |2,006       |
+|13,816|A                   |2,007       |
+|15,659|A                   |2,008       |
+|15,392|A                   |2,009       |
+|15,926|A                   |2,010       |
+|16,542|A                   |2,011       |
+|17,609|A                   |2,012       |
+|17,762|A                   |2,013       |
+|18,667|A                   |2,014       |
+|19,006|A                   |2,015       |
+|20,358|A                   |2,016       |
+|20,831|A                   |2,017       |
+|22,688|A                   |2,018       |
+|24,850|A                   |2,019       |
+|25,889|A                   |2,020       |
+|25,800|A                   |2,021       |
+
+(Vizualizovat na několika příkladech pomocí excelu a slovně okomentovat). 
+_________________________________________________________________________________________________________________________________
+
+2. Kolik je možné si koupit litrů mléka a kilogramů chleba za první a poslední srovnatelné období v dostupných datech cen a mezd? 
+_________________________________________________________________________________________________________________________________
+
+-- Kód k zobrazení hodnot ceny chleba a mléka za první a poslední sledované období:--
+
+SELECT 
+    id,
+    value,
+    category_code,
+    date_from,
+    date_to,
+    region_code,
+    code,
+    name,
+    price_value,
+    price_unit
+FROM czechia_price
+INNER JOIN czechia_price_category
+    ON czechia_price.category_code = czechia_price_category.code
+WHERE (name LIKE '%Mléko%' OR name LIKE '%Chléb%')
+    AND region_code IS NULL
+    AND date_from IN ('2006-01-02', '2018-12-10')
+GROUP BY id, category_code, date_from, date_to, region_code, code, name, price_value, price_unit
+ORDER BY date_from DESC;
+
+-- Výstup kódu:--
+|id         |value|category_code|date_from              |date_to                |region_code|code   |name                       |price_value|price_unit|
+|-----------|-----|-------------|-----------------------|-----------------------|-----------|-------|---------------------------|-----------|----------|
+|801,136,792|24.74|111,301      |2018-12-10 00:00:00.000|2018-12-16 00:00:00.000|           |111,301|Chléb konzumní kmínový     |1          |kg        |
+|801,136,657|19.55|114,201      |2018-12-10 00:00:00.000|2018-12-16 00:00:00.000|           |114,201|Mléko polotučné pasterované|1          |l         |
+|770,245,501|14.27|114,201      |2006-01-02 00:00:00.000|2006-01-08 00:00:00.000|           |114,201|Mléko polotučné pasterované|1          |l         |
+|770,241,857|14.91|111,301      |2006-01-02 00:00:00.000|2006-01-08 00:00:00.000|           |111,301|Chléb konzumní kmínový     |1          |kg        |
+
+- asi stačí jen toto
+-- Mezivýpočet rozdílu cen chleba a mléka v letech 2006 a 2018 --
+
+SELECT
+    p1.value AS Mleko_2018,
+    p2.value AS Mleko_2006,
+    p3.value AS Chleba_2018,
+    p4.value AS Chleba_2006,
+    (p1.value - p2.value) AS Mleko_rozdil,
+    (p3.value - p4.value) AS Chleba_rozdil
+FROM
+    czechia_price p1,
+    czechia_price p2,
+    czechia_price p3,
+    czechia_price p4
+WHERE
+    p1.id = 801136657 -- Mléko 2018
+    AND p2.id = 770245501 -- Mléko 2006
+    AND p3.id = 801136792 -- Chléb 2018
+    AND p4.id = 770241857 -- Chléb 2006;
+
+-- Výstup kódu:--
+
+|Mleko_2018|Mleko_2006|Chleba_2018|Chleba_2006|Mleko_rozdil|Chleba_rozdil|
+|----------|----------|-----------|-----------|------------|-------------|
+|19.55     |14.27     |24.74      |14.91      |5.28        |9.83         |
+
+
+-- Průměrná mzda za rok 2006 v 1. kvartále, které souvisí s prvním sledovaným obdobím začínajícím v lednu 2006.--
+SELECT
+	industry_branch_code , 
+    value, 
+    payroll_year,
+    payroll_quarter 
+FROM czechia_payroll
+WHERE value_type_code = 5958 
+	AND payroll_year = 2006
+	AND payroll_quarter = 1
+	AND industry_branch_code IS NULL 
+GROUP BY industry_branch_code; 
+
+-- Výstup kódu: -- 
+
+
+|industry_branch_code|value |payroll_year|payroll_quarter|
+|--------------------|------|------------|---------------|
+|                    |18,270|2,006       |1              |
+
+
+-- Průměrná mzda za rok 2018 ve 4. kvartále, které souvisí s posledním sledovaným obdobím začínajícím v prosinci 2018. --
+
+SELECT
+    industry_branch_code, 
+    value, 
+    payroll_year,
+    payroll_quarter 
+FROM czechia_payroll
+WHERE value_type_code = 5958 
+	AND payroll_year = 2018
+	AND payroll_quarter = 4 
+	AND industry_branch_code IS NULL 
+GROUP BY industry_branch_code; 
+
+Výstup kódu: 
+|industry_branch_code|value |payroll_year|payroll_quarter|
+|--------------------|------|------------|---------------|
+|                    |34,057|2,018       |4              |
+
+-- Všechny hodnoty v jedné tabulce:--
+
+SELECT
+    p1.value AS Mleko_2018,
+    p2.value AS Mleko_2006,
+    p3.value AS Chleba_2018,
+    p4.value AS Chleba_2006,
+    payroll_2018.value AS Mzda_2018,
+    payroll_2006.value AS Mzda_2006,
+    (payroll_2018.value / p1.value) AS Mleko_za_mzdu_2018,
+    (payroll_2006.value / p2.value) AS Mleko_za_mzdu_2006,
+    (payroll_2018.value / p3.value) AS Chleba_za_mzdu_2018,
+    (payroll_2006.value / p4.value) AS Chleba_za_mzdu_2006
+FROM
+    (SELECT DISTINCT value, id FROM czechia_price WHERE id = 801136657) p1,
+    (SELECT DISTINCT value, id FROM czechia_price WHERE id = 770245501) p2,
+    (SELECT DISTINCT value, id FROM czechia_price WHERE id = 801136792) p3,
+    (SELECT DISTINCT value, id FROM czechia_price WHERE id = 770241857) p4,
+    (SELECT MAX(value) AS value FROM czechia_payroll WHERE payroll_year = 2018 AND payroll_quarter = 4 AND value_type_code = 5958 AND industry_branch_code IS NULL) payroll_2018,
+    (SELECT MAX(value) AS value FROM czechia_payroll WHERE payroll_year = 2006 AND payroll_quarter = 1 AND value_type_code = 5958 AND industry_branch_code IS NULL) payroll_2006;
+_________________________________________________________________________________________________________________________________________________________________________________
+
+3. Která kategorie potravin zdražuje nejpomaleji (je u ní nejnižší percentuální meziroční nárůst)?
+_________________________________________________________________________________________________________________________________________________________________________________
+SELECT
+    category_code,
+    MAX(CASE WHEN YEAR(date_from) = 2006 THEN value END) AS hodnota_2006,
+    MAX(CASE WHEN YEAR(date_from) = 2018 THEN value END) AS hodnota_2018,
+    MAX(CASE WHEN YEAR(date_from) = 2018 THEN value END) - MAX(CASE WHEN YEAR(date_from) = 2006 THEN value END) AS rozdil,
+    ROUND(
+        (MAX(CASE WHEN YEAR(date_from) = 2018 THEN value END) - MAX(CASE WHEN YEAR(date_from) = 2006 THEN value END)) / 
+        MAX(CASE WHEN YEAR(date_from) = 2006 THEN value END) * 100, 2) AS procentualni_zmena
+FROM czechia_price
+WHERE region_code IS NULL AND YEAR(date_from) IN (2006, 2018)
+GROUP BY category_code
+order by procentualni_zmena;
+
+
+Výstup kódu:
+|category_code|hodnota_2006|hodnota_2018|rozdil|procentualni_zmena|
+|-------------|------------|------------|------|------------------|
+|212,101      |            |103.46      |      |                  |
+|117,101      |74.99       |60.68       |-14.31|-19.08            |
+|118,101      |22.56       |19.26       |-3.3  |-14.63            |
+|111,303      |43.52       |45.94       |2.42  |5.56              |
+|116,103      |33.94       |37.04       |3.1   |9.13              |
+|112,201      |109.26      |119.59      |10.33 |9.45              |
+|117,401      |18.45       |20.46       |2.01  |10.89             |
+|122,102      |7.94        |9.18        |1.24  |15.62             |
+|116,104      |36.02       |43.23       |7.21  |20.02             |
+|112,704      |121.2       |150.81      |29.61 |24.43             |
+|117,103      |55.51       |73.37       |17.86 |32.17             |
+|112,101      |169.9       |226.84      |56.94 |33.51             |
+|2,000,001    |69.56       |93.46       |23.9  |34.36             |
+|116,101      |32.45       |44.16       |11.71 |36.09             |
+|114,501      |114.1       |156.9       |42.8  |37.51             |
+|114,201      |14.66       |20.42       |5.76  |39.29             |
+|111,301      |17.81       |24.86       |7.05  |39.58             |
+|112,401      |52.09       |72.92       |20.83 |39.99             |
+|213,201      |8.57        |12.24       |3.67  |42.82             |
+|115,201      |72.42       |105.75      |33.33 |46.02             |
+|111,201      |8.05        |12.11       |4.06  |50.43             |
+|111,101      |23.01       |36.45       |13.44 |58.41             |
+|114,401      |5.98        |9.58        |3.6   |60.2              |
+|117,106      |19.25       |34.44       |15.19 |78.91             |
+|111,602      |26.5        |49.2        |22.7  |85.66             |
+|114,701      |24.18       |46.54       |22.36 |92.47             |
+|115,101      |108.63      |225.02      |116.39|107.14            |
+
+Nejpomaleji rostoucí kategorií, po ignorování kategorie 212101 (Bílé víno), která je sledována až od roku 2015, a tedy není vhodná pro přesné porovnání s ostatními hodnotami od roku 2006, je kategorie 117101 (Rajská jablka červená kulatá). Tato kategorie mezi lety 2006 a 2018 zlevnila o 19 %. Druhou nejpomaleji rostoucí a zlevňující kategorií je 118101 (Cukr krystal), který ve stejném období zlevnil o přibližně 14,5 %.
+
+-- Zjištění meziroční změny pro danou kategorii --
+
+SELECT *
+FROM (
+    SELECT 
+        category_code,    
+        MIN(value) AS value, 
+        YEAR(date_from) AS year,
+        MIN(date_from) AS date_from, 
+        LAG(MIN(value)) OVER (PARTITION BY category_code ORDER BY YEAR(date_from)) AS predchozi_hodnota,
+        CASE 
+            WHEN LAG(MIN(value)) OVER (PARTITION BY category_code ORDER BY YEAR(date_from)) IS NOT NULL 
+            THEN ROUND((MIN(value) - LAG(MIN(value)) OVER (PARTITION BY category_code ORDER BY YEAR(date_from))) / LAG(MIN(value)) OVER (PARTITION BY category_code ORDER BY YEAR(date_from)) * 100, 2)
+            ELSE NULL 
+        END AS mezirocni_zmena
+    FROM czechia_price cp
+    WHERE date_from BETWEEN '2006-01-02' AND '2018-12-10'
+    GROUP BY YEAR(date_from), category_code
+) AS poddotaz
+WHERE predchozi_hodnota IS NOT NULL
+ORDER BY mezirocni_zmena asc
+limit 10
+
+Výstup kódu: 
+|category_code|value|year |date_from              |predchozi_hodnota|mezirocni_zmena|
+|-------------|-----|-----|-----------------------|-----------------|---------------|
+|117,101      |15.78|2,011|2011-01-10 00:00:00.000|27.91            |-43.46         |
+|111,303      |24.53|2,009|2009-01-05 00:00:00.000|39.73            |-38.26         |
+|118,101      |10.97|2,018|2018-01-15 00:00:00.000|16.12            |-31.95         |
+|118,101      |12.34|2,015|2015-01-12 00:00:00.000|17.73            |-30.4          |
+|117,401      |7.64 |2,014|2014-01-13 00:00:00.000|10.75            |-28.93         |
+|117,103      |26.78|2,014|2014-01-13 00:00:00.000|37.13            |-27.88         |
+|116,104      |18.45|2,014|2014-01-13 00:00:00.000|25.53            |-27.73         |
+|111,201      |7.23 |2,009|2009-01-05 00:00:00.000|9.67             |-25.23         |
+|117,101      |18.4 |2,013|2013-01-14 00:00:00.000|24.4             |-24.59         |
+|117,103      |19.23|2,011|2011-01-10 00:00:00.000|24.73            |-22.24         |
+
+Tady chce seznam kategorií za rok 2006 a 2018 a seřadit, která je nejlevnější a která nejdražší 
+___________________________________________________________________________________________________________________________________________________________________________
+4.  Existuje rok, ve kterém byl meziroční nárůst cen potravin výrazně vyšší než růst mezd (větší než 10 %)?
+___________________________________________________________________________________________________________________________________________________________________________
+
+-- Vytvoření kódu pro růst cen potravin a jejich průměrné hodnoty za rok:-- 
+WITH Prumer_za_rok AS (
+    SELECT 
+        YEAR(date_from) AS rok,
+        ROUND(AVG(value), 2) AS Prumerna_hodnota
+    FROM czechia_price
+    GROUP BY YEAR(date_from)
+),
+mzdy_za_rok AS (
+    SELECT  
+        payroll_year AS rok,
+        MIN(value) AS value,  
+        value_type_code 
+    FROM 
+        czechia_payroll
+    WHERE 
+        value_type_code = 5958 
+        AND industry_branch_code IS NULL 
+        AND payroll_quarter = 1 
+        AND payroll_year BETWEEN 2006 AND 2018
+    GROUP BY payroll_year, value_type_code
+)
+SELECT 
+    p.rok,
+    p.Prumerna_hodnota,
+    m.value,
+    LAG(p.Prumerna_hodnota) OVER (ORDER BY p.rok) AS predchozi_prumer_ceny,
+    CASE 
+        WHEN LAG(p.Prumerna_hodnota) OVER (ORDER BY p.rok) IS NOT NULL 
+        THEN ROUND((p.Prumerna_hodnota - LAG(p.Prumerna_hodnota) OVER (ORDER BY p.rok)) / LAG(p.Prumerna_hodnota) OVER (ORDER BY p.rok) * 100, 2) 
+        ELSE NULL 
+    END AS procentualni_rozdil_ceny,
+    LAG(m.value) OVER (ORDER BY m.rok) AS predchozi_mzda,
+    CASE 
+        WHEN LAG(m.value) OVER (ORDER BY m.rok) IS NULL THEN NULL
+        ELSE ROUND(((m.value - LAG(m.value) OVER (ORDER BY m.rok)) / LAG(m.value) OVER (ORDER BY m.rok)) * 100, 2)
+    END AS procentualni_zmena_mzdy
+FROM 
+    Prumer_za_rok p
+LEFT JOIN 
+    mzdy_za_rok m ON p.rok = m.rok
+ORDER BY 
+    p.rok;
+
+WITH Prumer_za_rok AS (
+    SELECT 
+        YEAR(date_from) AS rok,
+        ROUND(AVG(value), 2) AS Prumerna_hodnota
+    FROM czechia_price
+    GROUP BY YEAR(date_from)
+)
+SELECT 
+    rok,
+    Prumerna_hodnota,
+    LAG(Prumerna_hodnota) OVER (ORDER BY rok) AS predchozi_hodnota,
+    CASE 
+        WHEN LAG(Prumerna_hodnota) OVER (ORDER BY rok) IS NOT NULL 
+        THEN (Prumerna_hodnota - LAG(Prumerna_hodnota) OVER (ORDER BY rok)) / LAG(Prumerna_hodnota) OVER (ORDER BY rok) * 100 
+        ELSE NULL 
+    END AS procentualni_rozdil
+FROM Prumer_za_rok
+ORDER BY rok;
+
+Výstup kódu: 
+|rok  |Prumerna_hodnota_cen|value |predchozi_prumer_ceny|procentualni_rozdil_ceny|predchozi_mzda|procentualni_zmena_mzdy|
+|-----|--------------------|------|---------------------|------------------------|--------------|-----------------------|
+|2,006|44.62               |17,679|                     |                        |              |                       |
+|2,007|47.45               |19,057|44.62                |6.34                    |17,679        |7.79                   |
+|2,008|50.49               |20,953|47.45                |6.41                    |19,057        |9.95                   |
+|2,009|47.06               |21,432|50.49                |-6.79                   |20,953        |2.29                   |
+|2,010|47.89               |22,052|47.06                |1.76                    |21,432        |2.89                   |
+|2,011|49.56               |22,579|47.89                |3.49                    |22,052        |2.39                   |
+|2,012|53                  |23,337|49.56                |6.94                    |22,579        |3.36                   |
+|2,013|55.94               |23,196|53                   |5.55                    |23,337        |-0.6                   |
+|2,014|56.44               |24,091|55.94                |0.89                    |23,196        |3.86                   |
+|2,015|56.12               |24,638|56.44                |-0.57                   |24,091        |2.27                   |
+|2,016|55.49               |25,786|56.12                |-1.12                   |24,638        |4.66                   |
+|2,017|61.03               |27,163|55.49                |9.98                    |25,786        |5.34                   |
+|2,018|62.21               |29,447|61.03                |1.93                    |27,163        |8.41                   |
+
+
+
+
+
+
+-- Vypočítání rozdílu ve mzdách:--
+
+WITH mzdy_za_rok AS (
+    SELECT  
+        payroll_year,
+        MIN(value) AS value,  
+        value_type_code
+    FROM 
+        czechia_payroll
+    WHERE 
+        value_type_code = 5958 
+        AND industry_branch_code IS NULL 
+        AND payroll_quarter = 1 
+        AND payroll_year BETWEEN 2006 AND 2018
+    GROUP BY payroll_year, value_type_code
+)
+SELECT 
+    value,
+    payroll_year,
+    LAG(value) OVER (PARTITION BY value_type_code ORDER BY payroll_year) AS predchozi_rok,
+    CASE 
+        WHEN LAG(value) OVER (PARTITION BY value_type_code ORDER BY payroll_year) IS NULL THEN NULL
+        ELSE ROUND(((value - LAG(value) OVER (PARTITION BY value_type_code ORDER BY payroll_year)) / LAG(value) OVER (PARTITION BY value_type_code ORDER BY payroll_year)) * 100, 2)
+    END AS procentualni_zmena
+FROM 
+    mzdy_za_rok
+ORDER BY 
+    payroll_year;
+
+-- Výstup kódu: -- 
+|value |payroll_year|predchozi_rok|procentualni_zmena|
+|------|------------|-------------|------------------|
+|17,679|2,006       |             |                  |
+|19,057|2,007       |17,679       |7.79              |
+|20,953|2,008       |19,057       |9.95              |
+|21,432|2,009       |20,953       |2.29              |
+|22,052|2,010       |21,432       |2.89              |
+|22,579|2,011       |22,052       |2.39              |
+|23,337|2,012       |22,579       |3.36              |
+|23,196|2,013       |23,337       |-0.6              |
+|24,091|2,014       |23,196       |3.86              |
+|24,638|2,015       |24,091       |2.27              |
+|25,786|2,016       |24,638       |4.66              |
+|27,163|2,017       |25,786       |5.34              |
+|29,447|2,018       |27,163       |8.41              |
+
+(Slovně okomentovat rozdíly).
+___________________________________________________________________________________________________________________________________________________________________________
+5. Má výška HDP vliv na změny ve mzdách a cenách potravin? Neboli, pokud HDP vzroste výrazněji v jednom roce, projeví se to na cenách potravin či mzdách ve stejném nebo následujícím roce výraznějším růstem? 
+___________________________________________________________________________________________________________________________________________________________________________
+
+WITH Prumer_za_rok AS (
+    SELECT 
+        YEAR(date_from) AS rok,
+        ROUND(AVG(value), 2) AS Prumerna_hodnota_ceny
+    FROM czechia_price
+    GROUP BY YEAR(date_from)
+),
+mzdy_za_rok AS (
+    SELECT  
+        payroll_year AS rok,
+        MIN(value) AS mzda,  
+        value_type_code 
+    FROM 
+        czechia_payroll
+    WHERE 
+        value_type_code = 5958 
+        AND industry_branch_code IS NULL 
+        AND payroll_quarter = 1 
+        AND payroll_year BETWEEN 2006 AND 2018
+    GROUP BY payroll_year, value_type_code
+),
+hdp_za_rok AS (
+    SELECT 
+        year AS rok,
+        GDP,
+        LAG(GDP) OVER (ORDER BY year) AS predchozi_hdp,
+        CASE 
+            WHEN LAG(GDP) OVER (ORDER BY year) IS NOT NULL THEN 
+                ROUND(((GDP - LAG(GDP) OVER (ORDER BY year)) / LAG(GDP) OVER (ORDER BY year)) * 100, 2)
+            ELSE NULL 
+        END AS procentualni_rozdil_hdp
+    FROM economies 
+    WHERE country LIKE 'Czech Republic' 
+      AND year BETWEEN 2006 AND 2018
+)
+SELECT 
+    p.rok,
+    p.Prumerna_hodnota_ceny,
+    m.mzda,
+    h.GDP,
+    h.predchozi_hdp,
+    h.procentualni_rozdil_hdp,
+    LAG(p.Prumerna_hodnota_ceny) OVER (ORDER BY p.rok) AS predchozi_prumer_ceny,
+    CASE 
+        WHEN LAG(p.Prumerna_hodnota_ceny) OVER (ORDER BY p.rok) IS NOT NULL 
+        THEN ROUND((p.Prumerna_hodnota_ceny - LAG(p.Prumerna_hodnota_ceny) OVER (ORDER BY p.rok)) / LAG(p.Prumerna_hodnota_ceny) OVER (ORDER BY p.rok) * 100, 2) 
+        ELSE NULL 
+    END AS procentualni_rozdil_ceny,
+    LAG(m.mzda) OVER (ORDER BY m.rok) AS predchozi_mzda,
+    CASE 
+        WHEN LAG(m.mzda) OVER (ORDER BY m.rok) IS NULL THEN NULL
+        ELSE ROUND(((m.mzda - LAG(m.mzda) OVER (ORDER BY m.rok)) / LAG(m.mzda) OVER (ORDER BY m.rok)) * 100, 2)
+    END AS procentualni_zmena_mzdy
+FROM 
+    Prumer_za_rok p
+LEFT JOIN 
+    mzdy_za_rok m ON p.rok = m.rok
+LEFT JOIN 
+    hdp_za_rok h ON p.rok = h.rok
+ORDER BY 
+    p.rok;
+
+
+Výstup kódu:
+
+|rok  |Prumerna_hodnota_ceny|mzda  |GDP                |predchozi_hdp      |procentualni_rozdil_hdp|predchozi_prumer_ceny|procentualni_rozdil_ceny|predchozi_mzda|procentualni_zmena_mzdy|
+|-----|---------------------|------|-------------------|-------------------|-----------------------|---------------------|------------------------|--------------|-----------------------|
+|2,006|44.62                |17,679|197,470,142,753.551|                   |                       |                     |                        |              |                       |
+|2,007|47.45                |19,057|208,469,898,850.69 |197,470,142,753.551|5.57                   |44.62                |6.34                    |17,679        |7.79                   |
+|2,008|50.49                |20,953|214,070,259,127.502|208,469,898,850.69 |2.69                   |47.45                |6.41                    |19,057        |9.95                   |
+|2,009|47.06                |21,432|204,100,298,391.036|214,070,259,127.502|-4.66                  |50.49                |-6.79                   |20,953        |2.29                   |
+|2,010|47.89                |22,052|209,069,940,963.177|204,100,298,391.036|2.43                   |47.06                |1.76                    |21,432        |2.89                   |
+|2,011|49.56                |22,579|212,750,323,790.759|209,069,940,963.177|1.76                   |47.89                |3.49                    |22,052        |2.39                   |
+|2,012|53                   |23,337|211,080,224,602.858|212,750,323,790.759|-0.79                  |49.56                |6.94                    |22,579        |3.36                   |
+|2,013|55.94                |23,196|210,983,331,025.624|211,080,224,602.858|-0.05                  |53                   |5.55                    |23,337        |-0.6                   |
+|2,014|56.44                |24,091|215,755,991,069.112|210,983,331,025.624|2.26                   |55.94                |0.89                    |23,196        |3.86                   |
+|2,015|56.12                |24,638|227,381,745,549.048|215,755,991,069.112|5.39                   |56.44                |-0.57                   |24,091        |2.27                   |
+|2,016|55.49                |25,786|233,151,067,380.883|227,381,745,549.048|2.54                   |56.12                |-1.12                   |24,638        |4.66                   |
+|2,017|61.03                |27,163|245,202,003,265.939|233,151,067,380.883|5.17                   |55.49                |9.98                    |25,786        |5.34                   |
+|2,018|62.21                |29,447|253,045,172,103.95 |245,202,003,265.939|3.2                    |61.03                |1.93                    |27,163        |8.41                   |
+
+
+výstup kódu: 
+|country       |year |GDP                |value |
+|--------------|-----|-------------------|------|
+|Czech Republic|2,000|152,688,350,008.684|8,793 |
+|Czech Republic|2,001|157,334,620,713.224|9,639 |
+|Czech Republic|2,002|159,804,546,639.628|10,298|
+|Czech Republic|2,003|165,531,443,734.197|10,463|
+|Czech Republic|2,004|173,500,559,474.731|11,237|
+|Czech Republic|2,005|184,954,402,823.471|11,809|
+|Czech Republic|2,006|197,470,142,753.551|12,543|
+|Czech Republic|2,007|208,469,898,850.69 |13,816|
+|Czech Republic|2,008|214,070,259,127.502|15,659|
+|Czech Republic|2,009|204,100,298,391.036|15,392|
+|Czech Republic|2,010|209,069,940,963.177|15,926|
+|Czech Republic|2,011|212,750,323,790.759|16,542|
+|Czech Republic|2,012|211,080,224,602.858|17,609|
+|Czech Republic|2,013|210,983,331,025.624|17,762|
+|Czech Republic|2,014|215,755,991,069.112|18,667|
+|Czech Republic|2,015|227,381,745,549.048|19,006|
+|Czech Republic|2,016|233,151,067,380.883|20,358|
+|Czech Republic|2,017|245,202,003,265.939|22,281|
+|Czech Republic|2,018|253,045,172,103.95 |20,874|
+|Czech Republic|2,019|258,899,638,367.936|30,821|
+|Czech Republic|2,020|244,395,294,183.036|31,471|
+
+(Slovně porovnat s růstem některých potravin a mezd během několika let). 
+
+
+Primární tabulka:
+
+WITH ceny AS (
+    SELECT 
+        YEAR(cp.date_from) AS rok,
+        cp.category_code,
+        cpc.name,
+        ROUND(AVG(cp.value), 2) AS prumerna_cena
+    FROM czechia_price cp
+    JOIN czechia_price_category cpc 
+        ON cp.category_code = cpc.code
+    WHERE cp.region_code IS NULL
+    GROUP BY YEAR(cp.date_from), cp.category_code, cpc.name
+),
+mzdy AS (
+    SELECT 
+        cp.payroll_year AS rok,
+        ROUND(AVG(cp.value), 2) AS prumerna_mzda
+    FROM czechia_payroll cp
+    WHERE 
+        cp.value_type_code = 5958 
+        AND cp.industry_branch_code IS NOT NULL
+    GROUP BY cp.payroll_year
+)
+SELECT 
+    c.rok,
+    c.category_code,
+    cpc.name AS category_name,
+    c.prumerna_cena,
+    m.prumerna_mzda
+FROM ceny c
+LEFT JOIN mzdy m
+    ON c.rok = m.rok
+JOIN czechia_price_category cpc
+    ON c.category_code = cpc.code
+ORDER BY c.rok, c.category_code;
+
+Sekundární tabulka
+SELECT 
+    e.country,
+    e.year,
+    e.GDP
+FROM 
+    economies e
+WHERE 
+    e.country IN ('Czech Republic', 'Belgium', 'Bulgaria', 'Croatia', 'Cyprus', 'Denmark', 'Estonia', 'Finland','France', 'Germany','Greece', 'Hungary', 'Ireland', 'Italy', 'Latvia', 'Lithuania', 'Luxembourg', 'Malta', 'Netherlands', 'Poland', 'Portugal', 'Romania', 'Slovakia', 'Slovenia', 'Spain', 'Sweden', 'Austria') 
+    AND e.year BETWEEN 2006 AND 2018
+ORDER BY 
+    e.year ASC;
