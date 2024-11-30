@@ -1,7 +1,8 @@
 SQL Projekt Zdeněk Dlabaja
 
 Primární a sekundární tabulka uloženy pod názvem:
-
+t_zdenek_dlabaja_project_SQL_primary_final
+t_zdenek_dlabaja_project_SQL_secondary_final
 __________________________________________________________________________________________________________________________
 -- Kód k primární tabulce:--
 
