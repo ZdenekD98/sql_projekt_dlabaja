@@ -64,8 +64,8 @@ Tabulka obsahuje:
 -	Rok (year),
 -	Kategorie potraviny (category_code),
 -	Název potraviny (category_name),
--	Průměrnou cenu za rok (vypočítanou jako průměrná roční cena – avg_price),
--	Průměrnou mzdu za rok (průměrná hrubá mzda s hodnotami NULL) – avg_mzda.
+-	Průměrnou cenu za rok v Kč (vypočítanou jako průměrná roční cena – avg_price),
+-	Průměrnou mzdu za rok v Kč (průměrná hrubá mzda s hodnotami NULL – avg_mzda).
 Poznámky k datům:
 -	Kategorie Jakostní víno bílé (212,101) má jednotkovou cenu uvedenou za 0,75 l, což je třeba zohlednit při srovnání s kategoriemi s cenou za 1 l nebo 1 kg.
 -	U piva je jednotková cena uvedena za 0,5 l, nikoliv za celý litr, což je rovněž nutné brát v úvahu při analýze.
@@ -75,7 +75,7 @@ Sekundární tabulka obsahuje data z tabulky „economies“ o HDP, GINI indexu 
 
 Data v sekundární tabulce jsou přizpůsobena sledovanému období (2006–2018) z primární tabulky. Některé údaje o GINI indexu však chybí: konkrétně pro Chorvatsko (2006, 2007, 2008), Slovensko (2017) a Německo (2017, 2018). Kromě toho chybí data za rok 2018 pro Irsko a Itálii.
 
-Pro Českou republiku jsou dostupná všechna data, včetně údajů o HDP, které jsou klíčové jako podpůrná proměnná pro primární tabulku.
+Pro Českou republiku jsou dostupná všechna data, včetně údajů o HDP, která jsou klíčová jako podpůrná proměnná pro primární tabulku.
 _______________________________________________________________________________________________________________________________
 Výzkumné otázky
 _______________________________________________________________________________________________________________________________
@@ -94,7 +94,7 @@ Poklesy mezd jsou v tabulce nejčastěji patrné v letech 2009, 2013, 2015, 2017
 2013: Česká ekonomika stagnovala, přetrvávaly dozvuky finanční krize, nízká poptávka a slabé investice. Snížení rozpočtového deficitu omezilo veřejné výdaje, což tlačilo firmy k úsporám, včetně mzdových nákladů.
 2015: Poklesy byly zaznamenány v odvětvích Administrativní a podpůrné činnosti a Peněžnictví a pojišťovnictví. Příčinou byly regulace, konsolidace v bankovnictví, stagnace a rostoucí automatizace.
 2017: Meziroční pokles se projevil v odvětvích Těžba a dobývání (volatilita komodit), Zdravotní a sociální péče a Kulturní, zábavní a rekreační činnosti (pravděpodobně omezené rozpočty při vysoké poptávce).
-2020–2021: Pandemická opatření proti šíření covidu významně zasáhla odvětví závislá na osobním kontaktu, jako jsou Ubytování, stravování, Doprava, Vzdělávání nebo Kulturní činnosti. Dopad byl silnější během chladnějších měsíců.
+2020–2021: Pandemická opatření proti šíření covidu významně zasáhla odvětví závislá na osobním kontaktu, jako jsou Ubytování, Stravování, Doprava, Vzdělávání nebo Kulturní činnosti. Dopad byl silnější během chladnějších měsíců.
 Tato období poklesů ilustrují, jak externí faktory ovlivňují mzdy napříč odvětvími.
 
 -- Kód pro všechna odvětví--
@@ -413,26 +413,6 @@ ________________________________________________________________________________
 Ve sledovaném období mezi lety 2006 až 2018 existuje pouze jeden rok, kdy je teoreticky možné sledovat nárůst cen až o 10 %. Je tomu tak v roce 2017, kdy se nárůst cen vyšplhal na 9,98 % oproti minulému roku. Naproti tomu nejvyšší meziroční nárůst mezd byl zaznamenán v roce 2008, kdy byl takřka 10 %.  Pokud je však řeč o absolutním rozdílu mezi procentuálním nárůstem cen a mezd, tak se nikdy nestalo, že by došlo k situaci, kdy by nárůst cen výrazně převyšoval nárůst mezd. Naopak v roce 2009 došlo k situaci, kdy procentuální nárůst mezd byl o 9,08 % rychlejší než nárůst cen.
 
 --Kód pro rozdíly ve mzdách a cenách v jednom dotazu:-- 
-
-WITH Prumer_za_rok AS (
-    SELECT 
-        YEAR(date_from) AS rok,
-        ROUND(AVG(value), 2) AS Prumerna_hodnota
-    FROM czechia_price
-    GROUP BY YEAR(date_from)
-)
-SELECT 
-    rok,
-    Prumerna_hodnota,
-    LAG(Prumerna_hodnota) OVER (ORDER BY rok) AS predchozi_hodnota,
-    CASE 
-        WHEN LAG(Prumerna_hodnota) OVER (ORDER BY rok) IS NOT NULL 
-        THEN (Prumerna_hodnota - LAG(Prumerna_hodnota) OVER (ORDER BY rok)) / LAG(Prumerna_hodnota) OVER (ORDER BY rok) * 100 
-        ELSE NULL 
-    END AS procentualni_rozdil
-FROM Prumer_za_rok
-ORDER BY rok;
-
 WITH Prumer_za_rok AS (
     SELECT 
         YEAR(date_from) AS rok,
@@ -507,7 +487,7 @@ V roce 2009, během globální ekonomické krize, HDP meziročně kleslo o -4,66
 Vztah HDP a cen
 V letech 2006–2018 byl vztah mezi HDP a cenami proměnlivý. Například v letech 2012 a 2013 HDP klesalo, ale ceny rostly, zatímco v letech 2015 a 2016 HDP rostlo, ale ceny klesaly. Tento vztah ovlivňuje řada dalších faktorů, jako je fiskální a monetární politika, automatizace nebo produktivita práce.
 
-Stručně řečeno, růst HDP nemusí automaticky znamenat růst mezd ani cen.
+Stručně řečeno, růst HDP nemusí automaticky znamenat růst mezd ani cen ve stejném nebo následujícím roce. 
 
 -- Kód pro sledování procentuálních orzdílů růstu HDP, cen a mezd: -- 
 
