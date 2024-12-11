@@ -1,4 +1,4 @@
-SQL Projekt Zdeněk Dlabaja
+SQL Projekt Zdeněk Dlabaja (Discord: zdenekd_61734)
 
 Primární a sekundární tabulka uloženy pod názvem:
 t_zdenek_dlabaja_project_SQL_primary_final
